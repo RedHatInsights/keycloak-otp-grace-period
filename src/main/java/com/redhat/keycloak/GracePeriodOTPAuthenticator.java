@@ -33,7 +33,7 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
             return;
         }
 
-        // Check if user has OTP configured
+        // Check if user has OTP or WebAuthn configured
         var credentialManager = user.credentialManager();
         if (credentialManager == null) {
             logger.warn("Credential manager is null for user: " + user.getUsername());
@@ -46,14 +46,20 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
                 .findAny()
                 .isPresent();
 
-        if (hasOTP) {
-            // User has OTP configured, allow access
-            logger.debugf("User %s has OTP configured, authentication successful", user.getUsername());
+        boolean hasWebAuthn = credentialManager
+                .getStoredCredentialsByTypeStream("webauthn")
+                .findAny()
+                .isPresent();
+
+        if (hasOTP || hasWebAuthn) {
+            // User has MFA configured, allow access
+            logger.debugf("User %s has MFA configured (OTP: %s, WebAuthn: %s), authentication successful",
+                         user.getUsername(), hasOTP, hasWebAuthn);
             context.success();
             return;
         }
 
-        // User doesn't have OTP - check grace period
+        // User doesn't have MFA - check grace period
         Long createdTimestamp = user.getCreatedTimestamp();
 
         if (createdTimestamp == null) {
