@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 public class GracePeriodOTPAuthenticator implements Authenticator {
 
     private static final Logger logger = Logger.getLogger(GracePeriodOTPAuthenticator.class);
-    private static final long GRACE_PERIOD_HOURS = 24;
+    private static final long DEFAULT_GRACE_PERIOD_HOURS = 24;
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
@@ -23,6 +23,9 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
             logger.error("Authentication context is null");
             return;
         }
+
+        // Get configured grace period or use default
+        long gracePeriodHours = getConfiguredGracePeriodHours(context);
 
         UserModel user = context.getUser();
 
@@ -85,7 +88,7 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
             return;
         }
 
-        long gracePeriodMs = TimeUnit.HOURS.toMillis(GRACE_PERIOD_HOURS);
+        long gracePeriodMs = TimeUnit.HOURS.toMillis(gracePeriodHours);
         long accountAge = currentTime - createdTimestamp;
 
         if (accountAge < gracePeriodMs) {
@@ -151,5 +154,35 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
     @Override
     public void close() {
         // Nothing to close
+    }
+
+    /**
+     * Reads the configured grace period from the authenticator configuration.
+     * Returns the default value if not configured or if the value is invalid.
+     */
+    private long getConfiguredGracePeriodHours(AuthenticationFlowContext context) {
+        String configValue = context.getAuthenticatorConfig() != null
+                ? context.getAuthenticatorConfig().getConfig().get(GracePeriodOTPAuthenticatorFactory.CONFIG_GRACE_PERIOD_HOURS)
+                : null;
+
+        if (configValue == null || configValue.trim().isEmpty()) {
+            logger.debugf("No grace period configured, using default: %d hours", DEFAULT_GRACE_PERIOD_HOURS);
+            return DEFAULT_GRACE_PERIOD_HOURS;
+        }
+
+        try {
+            long hours = Long.parseLong(configValue.trim());
+            if (hours <= 0) {
+                logger.warnf("Invalid grace period configured (%d), must be positive. Using default: %d hours",
+                            hours, DEFAULT_GRACE_PERIOD_HOURS);
+                return DEFAULT_GRACE_PERIOD_HOURS;
+            }
+            logger.debugf("Using configured grace period: %d hours", hours);
+            return hours;
+        } catch (NumberFormatException e) {
+            logger.warnf("Invalid grace period format '%s', using default: %d hours",
+                        configValue, DEFAULT_GRACE_PERIOD_HOURS);
+            return DEFAULT_GRACE_PERIOD_HOURS;
+        }
     }
 }

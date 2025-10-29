@@ -13,6 +13,7 @@ import java.util.List;
 public class GracePeriodOTPAuthenticatorFactory implements AuthenticatorFactory {
 
     public static final String PROVIDER_ID = "grace-period-otp-authenticator";
+    public static final String CONFIG_GRACE_PERIOD_HOURS = "grace.period.hours";
 
     @Override
     public String getDisplayType() {
@@ -26,7 +27,7 @@ public class GracePeriodOTPAuthenticatorFactory implements AuthenticatorFactory 
 
     @Override
     public boolean isConfigurable() {
-        return false; // Set to true if you want configurable grace period
+        return true;
     }
 
     @Override
@@ -44,22 +45,19 @@ public class GracePeriodOTPAuthenticatorFactory implements AuthenticatorFactory 
 
     @Override
     public String getHelpText() {
-        return "Enforces OTP configuration after a 24-hour grace period from account creation";
+        return "Enforces MFA (OTP/WebAuthn) configuration after a configurable grace period from account creation";
     }
 
     @Override
     public List<ProviderConfigProperty> getConfigProperties() {
-        return List.of();
-        // If you want configurable grace period:
-        // return List.of(
-        //     new ProviderConfigProperty(
-        //         "grace.period.hours",
-        //         "Grace Period (hours)",
-        //         "Number of hours before OTP is required",
-        //         ProviderConfigProperty.STRING_TYPE,
-        //         "24"
-        //     )
-        // );
+        ProviderConfigProperty gracePeriodProperty = new ProviderConfigProperty();
+        gracePeriodProperty.setType(ProviderConfigProperty.STRING_TYPE);
+        gracePeriodProperty.setName(CONFIG_GRACE_PERIOD_HOURS);
+        gracePeriodProperty.setLabel("Grace Period (hours)");
+        gracePeriodProperty.setHelpText("Number of hours after account creation before MFA is required. Default is 24 hours.");
+        gracePeriodProperty.setDefaultValue("24");
+
+        return List.of(gracePeriodProperty);
     }
 
     @Override
