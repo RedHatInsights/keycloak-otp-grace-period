@@ -1,16 +1,16 @@
-# Keycloak OTP Grace Period Authenticator
+# Keycloak WebAuthn Grace Period Authenticator
 
-A custom Keycloak authenticator that enforces OTP (One-Time Password) configuration with a configurable grace period for new users.
+A custom Keycloak authenticator that enforces WebAuthn (hardware token) configuration with a configurable grace period for new users.
 
 ## Overview
 
-This authenticator allows organizations to enforce MFA/OTP requirements while giving new users a grace period to set up their authentication method. After the grace period expires, users without OTP configured will be locked out until they configure it.
+This authenticator allows organizations to enforce hardware-based MFA requirements (such as YubiKey) while giving new users a grace period to set up their security key. After the grace period expires, users without WebAuthn configured will be required to register a hardware token before completing login.
 
 ## Features
 
 - **Configurable grace period** - Set the grace period in hours via Keycloak admin UI (default: 24 hours)
-- **Multi-factor authentication support** - Accepts both OTP and WebAuthn credentials
-- **Required action enforcement** - Users are prompted to set up MFA after grace period expires
+- **WebAuthn-only enforcement** - Requires hardware security keys (YubiKey, etc.), not software OTP apps
+- **Required action enforcement** - Users are prompted to register their security key after grace period expires
 - **Grace period notifications** - Remaining time is tracked in the authentication session
 - **Seamless integration** with Keycloak's authentication flows
 
@@ -18,11 +18,11 @@ This authenticator allows organizations to enforce MFA/OTP requirements while gi
 
 When a user attempts to authenticate:
 
-1. **User has MFA configured** (OTP or WebAuthn): Authentication proceeds normally
-2. **User created within grace period without MFA**: Authentication succeeds with remaining time tracked
-3. **User created beyond grace period without MFA**:
-   - User is prompted to configure MFA via required action
-   - Cannot complete login until MFA is configured
+1. **User has WebAuthn configured**: Authentication proceeds normally
+2. **User created within grace period without WebAuthn**: Authentication succeeds with remaining time tracked
+3. **User created beyond grace period without WebAuthn**:
+   - User is prompted to register a hardware security key (e.g., YubiKey) via required action
+   - Cannot complete login until WebAuthn is configured
 
 ## Building
 
@@ -53,17 +53,17 @@ This produces `target/otp-grace-period-authenticator.jar`.
 
 1. Navigate to **Authentication** > **Flows** in the Keycloak admin console
 2. Create a new flow or copy an existing one
-3. Add the **"OTP Grace Period Enforcer"** execution to your flow
+3. Add the **"WebAuthn Grace Period Enforcer"** execution to your flow
 4. Set the requirement to **REQUIRED**
 5. Click the **gear icon** (⚙️) next to the execution to configure:
-   - **Grace Period (hours)**: Number of hours after account creation before MFA is required (default: 24)
+   - **Grace Period (hours)**: Number of hours after account creation before WebAuthn is required (default: 24)
 6. Bind the flow to your desired authentication scenario (browser, direct grant, etc.)
 
 ### Configuration Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| Grace Period (hours) | Number | 24 | Number of hours after account creation before MFA is required. Must be a positive integer. |
+| Grace Period (hours) | Number | 24 | Number of hours after account creation before WebAuthn (hardware token) is required. Must be a positive integer. |
 
 ## Requirements
 
@@ -74,8 +74,10 @@ This produces `target/otp-grace-period-authenticator.jar`.
 ## Technical Details
 
 - **Provider ID**: `grace-period-otp-authenticator`
-- **Category**: OTP
-- **Supported MFA types**: OTP (TOTP/HOTP), WebAuthn
+- **Display Name**: WebAuthn Grace Period Enforcer
+- **Category**: WebAuthn
+- **Supported credential type**: WebAuthn (hardware tokens only)
+- **Required action**: `webauthn-register`
 - **Auth notes set**:
   - `grace_period_hours_remaining` - Hours remaining in grace period
   - `grace_period_minutes_remaining` - Minutes remaining when <1 hour left

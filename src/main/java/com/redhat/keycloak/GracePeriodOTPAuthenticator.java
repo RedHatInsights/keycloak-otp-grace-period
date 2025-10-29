@@ -7,7 +7,6 @@ import org.keycloak.authentication.Authenticator;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.models.credential.OTPCredentialModel;
 
 import java.util.concurrent.TimeUnit;
 
@@ -36,7 +35,7 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
             return;
         }
 
-        // Check if user has OTP or WebAuthn configured
+        // Check if user has WebAuthn configured
         var credentialManager = user.credentialManager();
         if (credentialManager == null) {
             logger.warn("Credential manager is null for user: " + user.getUsername());
@@ -44,25 +43,19 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
             return;
         }
 
-        boolean hasOTP = credentialManager
-                .getStoredCredentialsByTypeStream(OTPCredentialModel.TYPE)
-                .findAny()
-                .isPresent();
-
         boolean hasWebAuthn = credentialManager
                 .getStoredCredentialsByTypeStream("webauthn")
                 .findAny()
                 .isPresent();
 
-        if (hasOTP || hasWebAuthn) {
-            // User has MFA configured, allow access
-            logger.debugf("User %s has MFA configured (OTP: %s, WebAuthn: %s), authentication successful",
-                         user.getUsername(), hasOTP, hasWebAuthn);
+        if (hasWebAuthn) {
+            // User has WebAuthn configured, allow access
+            logger.debugf("User %s has WebAuthn configured, authentication successful", user.getUsername());
             context.success();
             return;
         }
 
-        // User doesn't have MFA - check grace period
+        // User doesn't have WebAuthn - check grace period
         Long createdTimestamp = user.getCreatedTimestamp();
 
         if (createdTimestamp == null) {
@@ -116,11 +109,11 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
 
             context.success();
         } else {
-            // Grace period expired - add required action to prompt user to configure MFA
-            logger.warnf("Grace period expired for user %s (account age: %d hours). Adding CONFIGURE_TOTP required action",
+            // Grace period expired - add required action to prompt user to configure WebAuthn
+            logger.warnf("Grace period expired for user %s (account age: %d hours). Adding webauthn-register required action",
                         user.getUsername(), TimeUnit.MILLISECONDS.toHours(accountAge));
 
-            user.addRequiredAction(UserModel.RequiredAction.CONFIGURE_TOTP);
+            user.addRequiredAction("webauthn-register");
 
             // Log the event but allow authentication to proceed so required action can be processed
             context.getEvent().detail("grace_period_expired", "true");
@@ -147,8 +140,7 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
 
     @Override
     public void setRequiredActions(KeycloakSession session, RealmModel realm, UserModel user) {
-        // Optionally add OTP required action if grace period expired
-        // user.addRequiredAction(UserModel.RequiredAction.CONFIGURE_TOTP);
+        // Not used - required action is added in authenticate() method when grace period expires
     }
 
     @Override

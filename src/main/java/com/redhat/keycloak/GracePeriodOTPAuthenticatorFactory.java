@@ -17,12 +17,12 @@ public class GracePeriodOTPAuthenticatorFactory implements AuthenticatorFactory 
 
     @Override
     public String getDisplayType() {
-        return "OTP Grace Period Enforcer";
+        return "WebAuthn Grace Period Enforcer";
     }
 
     @Override
     public String getReferenceCategory() {
-        return "otp";
+        return "webauthn";
     }
 
     @Override
@@ -45,7 +45,7 @@ public class GracePeriodOTPAuthenticatorFactory implements AuthenticatorFactory 
 
     @Override
     public String getHelpText() {
-        return "Enforces MFA (OTP/WebAuthn) configuration after a configurable grace period from account creation";
+        return "Enforces WebAuthn (hardware token) configuration after a configurable grace period from account creation";
     }
 
     @Override
@@ -54,7 +54,7 @@ public class GracePeriodOTPAuthenticatorFactory implements AuthenticatorFactory 
         gracePeriodProperty.setType(ProviderConfigProperty.STRING_TYPE);
         gracePeriodProperty.setName(CONFIG_GRACE_PERIOD_HOURS);
         gracePeriodProperty.setLabel("Grace Period (hours)");
-        gracePeriodProperty.setHelpText("Number of hours after account creation before MFA is required. Default is 24 hours.");
+        gracePeriodProperty.setHelpText("Number of hours after account creation before WebAuthn is required. Default is 24 hours.");
         gracePeriodProperty.setDefaultValue("24");
 
         return List.of(gracePeriodProperty);

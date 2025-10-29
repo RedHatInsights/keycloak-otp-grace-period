@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Keycloak custom authenticator extension that enforces OTP (One-Time Password) setup with a configurable grace period. The authenticator allows users a 24-hour grace period from account creation to configure OTP before blocking their access.
+This is a Keycloak custom authenticator extension that enforces WebAuthn (hardware token) setup with a configurable grace period. The authenticator allows users a configurable grace period (default: 24 hours) from account creation to register a WebAuthn security key (e.g., YubiKey) before requiring them to set up MFA.
 
 ## Build Commands
 
@@ -21,18 +21,20 @@ The build produces `target/otp-grace-period-authenticator.jar` which can be depl
 
 **GracePeriodOTPAuthenticator** (`src/main/java/com/redhat/keycloak/GracePeriodOTPAuthenticator.java`)
 - Main authenticator logic implementing Keycloak's `Authenticator` interface
-- Grace period: 24 hours (defined by `GRACE_PERIOD_HOURS` constant)
+- Grace period: Configurable via admin UI (default: 24 hours, defined by `DEFAULT_GRACE_PERIOD_HOURS` constant)
+- Credential type: WebAuthn only (hardware tokens like YubiKey)
 - Behavior:
-  - If user has OTP configured: Allow access
-  - If user created <24h ago without OTP: Allow access with warning (sets auth note with hours remaining)
-  - If user created >24h ago without OTP: Block access, disable account, set `account_locked_reason` attribute
+  - If user has WebAuthn configured: Allow access
+  - If user created within grace period without WebAuthn: Allow access with warning (sets auth note with hours/minutes remaining)
+  - If user created beyond grace period without WebAuthn: Add `webauthn-register` required action, redirect to security key registration
 
 **GracePeriodOTPAuthenticatorFactory** (`src/main/java/com/redhat/keycloak/GracePeriodOTPAuthenticatorFactory.java`)
 - Factory for creating authenticator instances (Keycloak SPI pattern)
 - Provider ID: `grace-period-otp-authenticator`
-- Display name: "OTP Grace Period Enforcer"
-- Uses singleton pattern for authenticator instances
-- Currently not configurable (hard-coded 24h period), but includes commented code showing how to make grace period configurable via admin UI
+- Display name: "WebAuthn Grace Period Enforcer"
+- Reference category: `webauthn`
+- Fully configurable via admin UI (grace period in hours)
+- Creates new instance per request (thread-safe, no singleton pattern)
 
 ### Keycloak SPI Integration
 
