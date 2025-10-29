@@ -113,16 +113,15 @@ public class GracePeriodOTPAuthenticator implements Authenticator {
 
             context.success();
         } else {
-            // Grace period expired - add required action instead of disabling account
+            // Grace period expired - add required action to prompt user to configure MFA
             logger.warnf("Grace period expired for user %s (account age: %d hours). Adding CONFIGURE_TOTP required action",
                         user.getUsername(), TimeUnit.MILLISECONDS.toHours(accountAge));
 
             user.addRequiredAction(UserModel.RequiredAction.CONFIGURE_TOTP);
-            user.setSingleAttribute("account_locked_reason", "OTP_NOT_CONFIGURED");
 
-            // Set authentication error
-            context.getEvent().error("otp_grace_period_expired");
-            context.failure(AuthenticationFlowError.CREDENTIAL_SETUP_REQUIRED);
+            // Log the event but allow authentication to proceed so required action can be processed
+            context.getEvent().detail("grace_period_expired", "true");
+            context.success();
         }
     }
 
